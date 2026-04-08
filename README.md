@@ -10,6 +10,8 @@ This repository contains a judge-ready local demo for the BGA Track at NottsHack
 - an auditor-visible history of meaningful events
 - a narrow blockchain-style trust layer for redemption, revocation, and audit checkpoints
 
+![MealTrust demo UI](docs/assets/mealtrust-demo.png)
+
 ## What This Project Is
 
 This is **not** a general voucher platform and **not** a crypto onboarding product.
