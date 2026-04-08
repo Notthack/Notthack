@@ -1,0 +1,154 @@
+# Run Log
+
+## Scope
+
+Completed Phase 0 to Phase 6 plus the smallest demo-safe implementation and the judge-facing strategy package for the university hardship meal voucher concept.
+
+## Files Read
+
+- `AGENTS.md`
+- `docs/BGA_NottsHack_Winning_Workflow.md`
+- `docs/BGA_Teack.md`
+- `docs/BGA Track 1（NottsHack）要件調査と領域別の課題分析レポート.md`
+
+## Public Research Used
+
+- BGA forum and BGA 2025 awards pages for sponsor and winner signals
+- World Bank DPI / ID4D / Findex signals for public-benefit and identity problems
+- European Commission ESPR / DPP and GS1 EPCIS for compliance-passport problems
+- UNFCCC and Japan MOE MRV sources for climate-audit problems
+- FTC scam data for consumer-protection candidate generation
+- Rumsan Rahat and Plastiks as deployment-pattern examples
+
+## Key Assumptions
+
+1. The BGA judging image in the local brief is not machine-readable, so weighting was inferred from the written judging language and public award patterns.
+2. Publicly named winners were treated as directional signals, not as exact reverse-engineered scoring weights.
+3. The workflow's definition of success is better served by a concept with a crisp trust model than by a concept with broader market size but weaker blockchain necessity.
+
+## Phase Results
+
+### Phase 0
+
+- Reverse-engineered BGA preference toward real institutional pain, backend trust layers, and pilotable systems.
+
+### Phase 1
+
+- Generated 20 candidates.
+- 15 survived first filtering.
+
+### Phase 2
+
+- Validated top 3:
+  - P01 aid credential + redemption audit
+  - P04 compliance passport for SME exporters
+  - P07 MRV audit trail for small climate projects
+
+### Phase 3
+
+- P01 passed strongest blockchain necessity test.
+- P04 and P07 remained credible but weaker.
+
+### Phase 4
+
+- Selected P01 as the recommended concept.
+
+### Phase 5
+
+- Fixed one deployment context: university hardship meal vouchers
+- Froze thesis and 3-sentence pitch
+- Defined minimum actor model
+- Froze on-chain / off-chain boundary
+- Designed 90–120 second demo with duplicate-redemption failure
+- Wrote a short DB-vs-blockchain rebuttal
+- Defined pilot path and non-MVP cuts
+
+### Phase 6
+
+- Froze system boundary and redemption-time logic
+- Defined explicit state machine
+- Defined minimal contract and backend plan
+- Ordered implementation by demo risk
+- Created UI task breakdown
+- Created believable seed data
+- Wrote acceptance tests for happy path and duplicate redemption
+- Deferred risky non-essential features explicitly
+
+### Implementation Progress
+
+- implemented a local Express backend with explicit ledger-style state transitions in `src/`
+- implemented merchant verify/redeem, issuer issue/revoke/override, student QR pass, and auditor history in `public/`
+- kept student flow wallet-free
+- enforced the frozen redemption-time rule: no hardship re-evaluation at checkout
+- added acceptance checks for happy path, duplicate redemption, revoked voucher, unauthorized merchant, auditor visibility, and override logging
+
+### Phase 7-9 Package
+
+- added harsh judge simulation and win strategy
+- added demo polish plan and live operator script
+- added UI fix list for judge-facing clarity
+- made an explicit blockchain credibility decision to keep the demo-safe ledger abstraction
+- added Q&A bank, slide outline, pitch script, and submission checklist
+
+### Phase 7-9 Planning Progress
+
+- judged the current build harshly against BGA criteria
+- decided not to add a real-chain checkpoint for the hackathon demo
+- drafted demo polish, operator script, blockchain credibility wording, Q&A bank, slide outline, pitch script, and submission checklist
+
+## Final Recommendation
+
+Build around:
+
+`A wallet-free QR hardship meal voucher for university students, using blockchain only for revocation, shared redemption state, audit checkpoints, and override audit events.`
+
+## Blockers
+
+None that blocked implementation.
+
+## Next Best Action
+
+Move to demo rehearsal and pitch alignment with this order:
+
+1. rehearse the 90–120 second happy path plus duplicate-redemption failure
+2. capture screenshots or a short demo video
+3. tighten the spoken rebuttal for `why not a normal server?`
+4. only then consider a real on-chain adapter if it improves judge confidence without risking stability
+
+## Judge Calibration
+
+- The project is competitive if the team keeps the story on the shared-trust layer and executes the demo cleanly.
+- The biggest risk is sounding like a generic voucher admin tool.
+- The best defense is a crisp, repeated explanation of revocation, redemption state, and audit checkpoints.
+
+## Current Implementation Notes
+
+- the backend uses a local ledger abstraction to preserve demo safety
+- verification and redemption are separated in the merchant flow
+- blocked redemption is stored as an off-chain audit event
+- manual override is stored as off-chain approval plus on-chain override event logging semantics
+- judge-safe wording should describe the ledger as a demo-safe representation of shared on-chain state
+
+## Validation Run
+
+- `node --check src/server.js`
+- `node --check public/app.js`
+- `node --check scripts/acceptance-check.js`
+- `npm run test:acceptance`
+- HTTP smoke checks for `/`, `/api/bootstrap`, and `/api/context`
+
+## Competitiveness Call
+
+Competitive, but not automatically winning.
+
+Why it can win:
+
+- clear institutional problem
+- tight blockchain necessity
+- demo-safe live flow
+- non-crypto beneficiary UX
+
+Why it can lose:
+
+- if the story sounds like voucher management instead of shared trust state
+- if the blockchain moment is not pointed out during redemption and audit
