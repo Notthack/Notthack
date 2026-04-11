@@ -271,3 +271,128 @@ Why it can lose:
   - `node --check src/server.js`
   - `flutter build web`
   - `npm run test:acceptance`
+
+## 2026-04-12 Brand Name Update
+
+- updated outward-facing product naming from `MealTrust` to `NourishChain`
+- kept internal implementation names stable where renaming would create avoidable risk:
+  - `mealtrust_app/`
+  - `mealtrust_state`
+- updated visible product surfaces:
+  - `README.md`
+  - Flutter app title and login screen
+  - web manifest and web page title
+  - Android app label
+  - setup and app readme text
+  - backend service name in health/root responses
+
+## 2026-04-12 WSL Live Solana Handoff
+
+- WSL-side localnet work has reached deploy and live redeem confirmation
+- confirmed localnet redeem signature exists and `solana confirm -v` passed
+- next task is to push the WSL live-Solana diff to GitHub on a dedicated feature branch so another contributor can take over
+- canonical handoff file:
+  - `workspace/wsl_live_solana_handoff.md`
+
+## 2026-04-12 Frontend Manager Prompt
+
+- added `workspace/frontend_manager_prompt.md`
+- the file is the frontend-specific manager prompt for the Flutter app
+- it splits work into issuer/admin, student/beneficiary, merchant, auditor, shared components, and validation workstreams
+
+## 2026-04-12 NourishChain Frontend Branding And Logo
+
+- copied `docs/assets/Nourish_Chain_logo-removebg-preview.png` into the Flutter asset tree as `mealtrust_app/assets/brand/nourish_chain_logo.png`
+- added `NourishBrandMark` to the shared Flutter widgets layer
+- used the logo in:
+  - the main app bar across role screens
+  - the login hero panel
+- updated `mealtrust_app/pubspec.yaml` to include the brand asset
+- reworked the frontend into a more presentation-safe NourishChain shell with reusable cards, pills, metrics, and status panels
+- validation:
+  - `flutter pub get`
+  - `flutter build web`
+- result:
+  - the logo is present in the Flutter web build
+  - the frontend remains compatible with the existing backend contract
+
+## 2026-04-12 Frontend Redesign Prompt
+
+- created `workspace/frontend_ui_redesign_prompt.md`
+- the prompt explicitly tells the next frontend run to discard the current screen skeleton and rebuild the app as a role-separated NourishChain experience
+- it defines the required role split:
+  - issuer / Student Affairs
+  - student / beneficiary
+  - merchant / cafeteria
+  - auditor / finance / compliance
+- it also defines the required screen transitions and acceptance expectations for the Flutter frontend redesign
+
+## 2026-04-12 Frontend Role Hub Rewrite
+
+- replaced the old post-login route behavior with a NourishChain home / role switch hub
+- the home screen now shows:
+  - issuer entry
+  - student entry
+  - merchant entry
+  - auditor entry
+  - a visible demo sequence
+  - a current-role chip
+- the login flow now lands on the home hub instead of jumping directly into a role screen
+- the transparent NourishChain logo remains integrated in the app shell and login hero
+- validation:
+  - `flutter analyze`
+  - `flutter build web`
+- result:
+  - the frontend now has a visibly different structure, not just a branded overlay
+  - the role-specific screens are now reachable through an explicit switch surface
+
+## 2026-04-12 Home Bottom Tabs And MealTrust Rename Cleanup
+
+- changed the post-login surface into a true bottom-tab home shell
+- tabs now directly expose:
+  - Home
+  - Issuer
+  - Student
+  - Merchant
+  - Auditor
+- updated the visible app package name in `mealtrust_app/pubspec.yaml` to `nourishchain`
+- removed the remaining visible `MealTrust`/`mealtrust` framing from the active Flutter UI surfaces
+- cleaned stale Flutter build artifacts so the renamed package resolved correctly again
+- validation:
+  - `flutter clean`
+  - `flutter pub get`
+  - `flutter build web`
+- result:
+  - the app now presents a bottom-tab navigation model instead of a single role-hub landing only
+  - the web build succeeds with the new package name and updated UI shell
+
+## 2026-04-12 Admin Route Alignment
+
+- added an explicit `/admin` route in `src/server.js` so it serves the same Flutter web app as `/`
+- rebuilt `mealtrust_app/build/web` after the routing change
+- result:
+  - `/admin` should no longer fall through to any old UI surface
+  - the backend now treats `/admin` as part of the current Flutter demo shell rather than a legacy route
+
+## 2026-04-12 One-Command Demo Helper
+
+- added a root `Makefile` to make the local demo easier to run
+- targets now include:
+  - `make demo`
+  - `make build-web`
+  - `make start`
+  - `make test`
+  - `make clean`
+  - `make help`
+- updated `README.md` to document `make demo` as the simplest startup path
+- result:
+  - a new contributor can build the Flutter web app and start the backend with one command
+  - the README now points directly to the expected localhost demo URL
+
+## 2026-04-12 Windows-Friendly Demo Script
+
+- added `npm run demo` as a cross-platform one-command startup path
+- `npm run demo` builds the Flutter web app and then starts the Node backend
+- updated `README.md` to note that Windows PowerShell users can use `npm run demo` if GNU `make` is unavailable
+- result:
+  - the repository now has both a WSL-friendly `make demo` path and a Windows-friendly `npm run demo` path

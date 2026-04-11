@@ -1,30 +1,57 @@
 class Voucher {
   final String id;
   final String studentId;
+  final String? studentName;
+  final String? label;
+  final String? amountLabel;
   final String state; // active | redeemed | revoked
   final String issuedAt;
   final String? redeemedAt;
   final String? revokedAt;
   final String? merchantId;
+  final String? onChainState;
+  final String? redemptionCheckpointId;
+  final int manualOverrideCount;
+  final int blockedRedemptionCount;
+  final String? lastEventType;
+  final String? lastEventAt;
 
   Voucher({
     required this.id,
     required this.studentId,
+    this.studentName,
+    this.label,
+    this.amountLabel,
     required this.state,
     required this.issuedAt,
     this.redeemedAt,
     this.revokedAt,
     this.merchantId,
+    this.onChainState,
+    this.redemptionCheckpointId,
+    this.manualOverrideCount = 0,
+    this.blockedRedemptionCount = 0,
+    this.lastEventType,
+    this.lastEventAt,
   });
 
   factory Voucher.fromJson(Map<String, dynamic> json) => Voucher(
         id: json['voucherId'] ?? json['id'] ?? '',
         studentId: json['studentId'] ?? '',
+        studentName: json['studentName'],
+        label: json['label'],
+        amountLabel: json['amountLabel'],
         state: json['state'] ?? 'active',
         issuedAt: json['issuedAt'] ?? '',
         redeemedAt: json['redeemedAt'],
         revokedAt: json['revokedAt'],
         merchantId: json['merchantId'],
+        onChainState: json['onChainState'],
+        redemptionCheckpointId: json['redemptionCheckpointId'],
+        manualOverrideCount: (json['manualOverrideCount'] as num?)?.toInt() ?? 0,
+        blockedRedemptionCount: (json['blockedRedemptionCount'] as num?)?.toInt() ?? 0,
+        lastEventType: json['lastEventType'],
+        lastEventAt: json['lastEventAt'],
       );
 
   bool get isActive => state == 'active';

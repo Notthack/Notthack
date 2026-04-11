@@ -5,10 +5,10 @@
 // 'flutter create' template.
 
 // The application's name. By default this is also the title of the Flutter window.
-PRODUCT_NAME = mealtrust
+PRODUCT_NAME = NourishChain
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.mealtrust.mealtrust
+PRODUCT_BUNDLE_IDENTIFIER = com.nourishchain.nourishchain
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.mealtrust. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 com.nourishchain. All rights reserved.

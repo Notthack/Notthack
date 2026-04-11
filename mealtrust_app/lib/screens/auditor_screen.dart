@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../models/voucher.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
-import '../models/voucher.dart';
+import '../widgets/nourish_components.dart';
 import 'login_screen.dart';
 
 class AuditorScreen extends StatefulWidget {
@@ -17,11 +18,19 @@ class _AuditorScreenState extends State<AuditorScreen> {
   SolanaStatus? _solana;
   bool _loading = true;
   String? _error;
+  String _filter = 'all';
+  final _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -34,7 +43,7 @@ class _AuditorScreenState extends State<AuditorScreen> {
       final status = await ApiService.getSolanaStatus();
       if (!mounted) return;
       setState(() {
-        _events = events.reversed.toList(); // newest first
+        _events = events.reversed.toList();
         _solana = status;
       });
     } catch (e) {
@@ -61,42 +70,136 @@ class _AuditorScreenState extends State<AuditorScreen> {
     );
   }
 
+  List<AuditEvent> get _filteredEvents {
+    final query = _searchController.text.trim().toLowerCase();
+    return _events.where((event) {
+      final matchesFilter = _filter == 'all' || event.type == _filter;
+      final matchesQuery = query.isEmpty ||
+          event.voucherId.toLowerCase().contains(query) ||
+          (event.merchantId ?? '').toLowerCase().contains(query) ||
+          (event.studentId ?? '').toLowerCase().contains(query) ||
+          (event.reason ?? '').toLowerCase().contains(query);
+      return matchesFilter && matchesQuery;
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Audit History'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _load,
-            tooltip: 'Refresh',
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Sign out',
-            onPressed: _logout,
-          ),
-        ],
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
+    final counts = <String, int>{};
+    for (final e in _events) {
+      counts[e.type] = (counts[e.type] ?? 0) + 1;
+    }
+
+    return NourishShell(
+      roleLabel: 'Auditor / Finance',
+      title: 'NourishChain',
+      subtitle: 'Audit history and chain status',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          onPressed: _load,
+          tooltip: 'Refresh',
+        ),
+        IconButton(
+          icon: const Icon(Icons.logout),
+          tooltip: 'Sign out',
+          onPressed: _logout,
+        ),
+      ],
+      chips: [
+        NourishPill(
+          label: _solana?.enabled == true ? 'localnet live' : 'chain offline',
+          icon: _solana?.enabled == true ? Icons.link : Icons.link_off,
+          background: const Color(0x193D6DE1),
+          foreground: NourishColors.blue,
+          borderColor: const Color(0x263D6DE1),
+        ),
+      ],
+      scrollable: false,
+      child: _loading
+          ? const Padding(
+              padding: EdgeInsets.symmetric(vertical: 80),
+              child: Center(child: CircularProgressIndicator()),
+            )
           : _error != null
               ? _buildError()
               : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (_solana != null) _buildSolanaBanner(_solana!),
-                    _buildSummaryBar(),
+                    NourishHeaderPanel(
+                      roleLabel: 'Audit trail',
+                      headline: 'See the same state, the same history, and the same checkpoint story.',
+                      body:
+                          'Auditors do not need the hidden hardship reasoning. They need the visible events, the live chain status, and a clean path to explain what happened.',
+                      badges: [
+                        NourishPill(
+                          label: 'Issued ${counts['voucher_issued'] ?? 0}',
+                          icon: Icons.add_card,
+                          background: const Color(0x14FFFFFF),
+                          foreground: Colors.white,
+                        ),
+                        NourishPill(
+                          label: 'Redeemed ${counts['voucher_redeemed'] ?? 0}',
+                          icon: Icons.done_all,
+                          background: const Color(0x14FFFFFF),
+                          foreground: Colors.white,
+                        ),
+                        NourishPill(
+                          label: 'Blocked ${counts['voucher_redemption_blocked'] ?? 0}',
+                          icon: Icons.block,
+                          background: const Color(0x14FFFFFF),
+                          foreground: Colors.white,
+                        ),
+                      ],
+                      trailing: const Icon(Icons.history, color: Colors.white, size: 38),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildSolanaBanner(),
+                    const SizedBox(height: 16),
+                    _buildSummaryBar(counts),
+                    const SizedBox(height: 16),
+                    NourishActionCard(
+                      title: 'Audit filters',
+                      body:
+                          'Use the filter chips and search box to isolate issuances, redemptions, revocations, blocked redemptions, or overrides.',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          TextField(
+                            controller: _searchController,
+                            onChanged: (_) => setState(() {}),
+                            decoration: const InputDecoration(
+                              labelText: 'Search voucher, student, merchant, or reason',
+                              prefixIcon: Icon(Icons.search),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              _filterChip('all', 'All'),
+                              _filterChip('voucher_issued', 'Issued'),
+                              _filterChip('voucher_redeemed', 'Redeemed'),
+                              _filterChip('voucher_revoked', 'Revoked'),
+                              _filterChip('voucher_redemption_blocked', 'Blocked'),
+                              _filterChip('override_logged', 'Override'),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     Expanded(
-                      child: _events.isEmpty
-                          ? const Center(child: Text('No events recorded yet.'))
+                      child: _filteredEvents.isEmpty
+                          ? const Center(child: Text('No events matched the current filters.'))
                           : RefreshIndicator(
                               onRefresh: _load,
                               child: ListView.builder(
-                                padding: const EdgeInsets.all(12),
-                                itemCount: _events.length,
+                                padding: const EdgeInsets.only(bottom: 12),
+                                itemCount: _filteredEvents.length,
                                 itemBuilder: (_, i) => _EventTile(
-                                  event: _events[i],
+                                  event: _filteredEvents[i],
                                   index: i,
                                   onOpenExplorer: _openExplorer,
                                 ),
@@ -125,63 +228,129 @@ class _AuditorScreenState extends State<AuditorScreen> {
     );
   }
 
-  Widget _buildSolanaBanner(SolanaStatus status) {
-    final isLive = status.enabled;
+  Widget _buildSolanaBanner() {
+    final status = _solana;
+    final isLive = status?.enabled == true;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isLive
               ? [const Color(0xFF9945FF), const Color(0xFF14F195)]
-              : [Colors.grey.shade400, Colors.grey.shade600],
+              : [Colors.grey.shade500, Colors.grey.shade700],
         ),
+        borderRadius: BorderRadius.circular(24),
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(6),
+              color: Colors.white.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.link, color: Colors.white, size: 16),
+            child: const Icon(Icons.link, color: Colors.white, size: 18),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   isLive
-                      ? 'Solana ${status.cluster ?? "localnet"} — LIVE'
+                      ? 'Solana ${status?.cluster ?? "localnet"} — LIVE'
                       : 'Solana — offline',
                   style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13),
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13.5,
+                  ),
                 ),
-                if (status.wallet != null)
+                if (status?.wallet != null)
                   Text(
-                    '${_short(status.wallet!)}  •  ${status.balance?.toStringAsFixed(3) ?? "?"} SOL',
+                    '${_short(status!.wallet!)}  •  ${status.balance?.toStringAsFixed(3) ?? "?"} SOL',
                     style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 11,
-                        fontFamily: 'monospace'),
+                      color: Colors.white70,
+                      fontSize: 11.5,
+                      fontFamily: 'monospace',
+                    ),
                   ),
               ],
             ),
           ),
-          if (status.wallet != null)
+          if (status?.wallet != null)
             IconButton(
               icon: const Icon(Icons.open_in_new,
                   color: Colors.white, size: 18),
               tooltip: 'View wallet on Solana Explorer',
               onPressed: () => _openExplorer(
-                  'https://explorer.solana.com/address/${status.wallet}?cluster=custom&customUrl=${Uri.encodeComponent(status.rpcUrl ?? 'http://127.0.0.1:8899')}'),
+                  'https://explorer.solana.com/address/${status!.wallet}?cluster=custom&customUrl=${Uri.encodeComponent(status.rpcUrl ?? 'http://127.0.0.1:8899')}'),
             ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSummaryBar(Map<String, int> counts) {
+    return Row(
+      children: [
+        Expanded(
+          child: NourishMetricCard(
+            label: 'Issued',
+            value: '${counts['voucher_issued'] ?? 0}',
+            accent: NourishColors.blue,
+            icon: Icons.add_card,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: NourishMetricCard(
+            label: 'Redeemed',
+            value: '${counts['voucher_redeemed'] ?? 0}',
+            accent: NourishColors.green,
+            icon: Icons.done_all,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: NourishMetricCard(
+            label: 'Blocked',
+            value: '${counts['voucher_redemption_blocked'] ?? 0}',
+            accent: Colors.orange,
+            icon: Icons.block,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: NourishMetricCard(
+            label: 'Revoked',
+            value: '${counts['voucher_revoked'] ?? 0}',
+            accent: Colors.red,
+            icon: Icons.cancel,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _filterChip(String value, String label) {
+    final selected = _filter == value;
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) => setState(() => _filter = value),
+      selectedColor: NourishColors.green.withValues(alpha: 0.14),
+      labelStyle: TextStyle(
+        color: selected ? NourishColors.greenDark : NourishColors.slate,
+        fontWeight: FontWeight.w700,
+      ),
+      side: BorderSide(
+        color: selected
+            ? NourishColors.green.withValues(alpha: 0.24)
+            : Colors.black.withValues(alpha: 0.06),
+      ),
+      backgroundColor: Colors.white,
     );
   }
 
@@ -189,42 +358,7 @@ class _AuditorScreenState extends State<AuditorScreen> {
     if (addr.length < 12) return addr;
     return '${addr.substring(0, 6)}…${addr.substring(addr.length - 6)}';
   }
-
-  Widget _buildSummaryBar() {
-    final counts = <String, int>{};
-    for (final e in _events) {
-      counts[e.type] = (counts[e.type] ?? 0) + 1;
-    }
-    return Container(
-      color: const Color(0xFF7B4AE3).withValues(alpha: 0.06),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _sumChip('Issued', counts['voucher_issued'] ?? 0, Colors.blue),
-          _sumChip('Redeemed', counts['voucher_redeemed'] ?? 0, Colors.green),
-          _sumChip('Blocked', counts['voucher_redemption_blocked'] ?? 0,
-              Colors.orange),
-          _sumChip('Revoked', counts['voucher_revoked'] ?? 0, Colors.red),
-        ],
-      ),
-    );
-  }
-
-  Widget _sumChip(String label, int count, Color color) {
-    return Column(
-      children: [
-        Text('$count',
-            style: TextStyle(
-                fontSize: 18, fontWeight: FontWeight.bold, color: color)),
-        Text(label,
-            style: const TextStyle(fontSize: 11, color: Colors.black45)),
-      ],
-    );
-  }
 }
-
-// ─── Event tile ──────────────────────────────────────────────────────────────
 
 class _EventTile extends StatelessWidget {
   final AuditEvent event;
@@ -253,29 +387,23 @@ class _EventTile extends StatelessWidget {
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
-                border: Border.all(color: color.withValues(alpha: 0.3)),
+                border: Border.all(color: color.withValues(alpha: 0.28)),
               ),
               child: Icon(icon, size: 18, color: color),
             ),
             if (index != 0)
-              Container(
-                  width: 2, height: 24, color: Colors.grey.withValues(alpha: 0.2)),
+              Container(width: 2, height: 22, color: Colors.grey.withValues(alpha: 0.18)),
           ],
         ),
         const SizedBox(width: 12),
         Expanded(
           child: Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2)),
-              ],
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -285,7 +413,7 @@ class _EventTile extends StatelessWidget {
                   children: [
                     Text(event.label,
                         style: TextStyle(
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w800,
                             color: color,
                             fontSize: 13)),
                     Text(_formatTime(event.timestamp),
@@ -297,16 +425,21 @@ class _EventTile extends StatelessWidget {
                 Text(event.voucherId,
                     style: const TextStyle(
                         fontSize: 12, fontFamily: 'monospace')),
-                if (event.merchantId != null)
-                  Text('Merchant: ${event.merchantId}',
-                      style: const TextStyle(
-                          fontSize: 11, color: Colors.black45)),
-                if (event.reason != null)
-                  Text('Reason: ${event.reason}',
-                      style: TextStyle(
-                          fontSize: 11, color: Colors.red.shade300)),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (event.merchantId != null)
+                      _smallChip('Merchant ${event.merchantId}', color),
+                    if (event.studentId != null)
+                      _smallChip('Student ${event.studentId}', Colors.black54),
+                    if (event.reason != null)
+                      _smallChip(event.reason!, Colors.red.shade400),
+                  ],
+                ),
                 if (event.isOnChain) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   _OnChainBadge(
                     signature: event.txSignature!,
                     onTap: () => onOpenExplorer(event.explorerUrl!),
@@ -320,18 +453,32 @@ class _EventTile extends StatelessWidget {
     );
   }
 
+  Widget _smallChip(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+
   Color _colorFor(String type) {
     switch (type) {
       case 'voucher_issued':
-        return Colors.blue;
+        return NourishColors.blue;
       case 'voucher_redeemed':
-        return Colors.green;
+        return NourishColors.green;
       case 'voucher_revoked':
         return Colors.red;
       case 'voucher_redemption_blocked':
         return Colors.orange;
       case 'override_logged':
-        return Colors.purple;
+        return NourishColors.violet;
       default:
         return Colors.grey;
     }
@@ -377,26 +524,26 @@ class _OnChainBadge extends StatelessWidget {
         : signature;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(6),
+      borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: [Color(0xFF9945FF), Color(0xFF14F195)],
           ),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.link, size: 12, color: Colors.white),
-            const SizedBox(width: 4),
+            const SizedBox(width: 5),
             Text(
               'Solana: $short',
               style: const TextStyle(
-                fontSize: 10,
+                fontSize: 10.5,
                 color: Colors.white,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w700,
                 fontFamily: 'monospace',
               ),
             ),

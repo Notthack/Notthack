@@ -109,6 +109,26 @@ The backend listens on:
 http://localhost:3000
 ```
 
+### One-command demo
+
+If you want the simplest local startup path, use:
+
+```bash
+make demo
+```
+
+If you are on Windows PowerShell and do not have GNU `make`, use:
+
+```bash
+npm run demo
+```
+
+Both commands build the Flutter web app and then start the backend. After it finishes starting, open:
+
+```text
+http://localhost:3000
+```
+
 ### Build the Flutter web UI
 
 ```bash

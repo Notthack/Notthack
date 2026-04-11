@@ -1,4 +1,4 @@
-name: mealtrust
+name: nourishchain
 description: NourishChain - Wallet-free QR meal voucher trust layer for university hardship support.
 
 publish_to: 'none'
@@ -25,3 +25,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/brand/nourish_chain_logo.png

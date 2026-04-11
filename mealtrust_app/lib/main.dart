@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
+import 'widgets/nourish_components.dart';
 
 void main() {
   runApp(const NourishChainApp());
@@ -15,26 +16,68 @@ class NourishChainApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF00C4A0),
+          seedColor: NourishColors.green,
           brightness: Brightness.light,
+          surface: NourishColors.paper,
         ),
         useMaterial3: true,
+        scaffoldBackgroundColor: NourishColors.cream,
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF00C4A0),
-          foregroundColor: Colors.white,
+          backgroundColor: Colors.transparent,
+          foregroundColor: NourishColors.ink,
           elevation: 0,
+          scrolledUnderElevation: 0,
+          centerTitle: false,
+        ),
+        cardTheme: CardThemeData(
+          color: Colors.white,
+          elevation: 0,
+          margin: EdgeInsets.zero,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+          ),
+        ),
+        textTheme: const TextTheme(
+          bodyMedium: TextStyle(color: NourishColors.ink),
+          bodySmall: TextStyle(color: NourishColors.slate),
+          titleLarge: TextStyle(
+            color: NourishColors.ink,
+            fontWeight: FontWeight.w800,
+          ),
+          titleMedium: TextStyle(
+            color: NourishColors.ink,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF00C4A0),
+            backgroundColor: NourishColors.ink,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            textStyle: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: NourishColors.ink,
+            side: const BorderSide(color: Color(0x1A17332D)),
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+          enabledBorder: OutlineInputBorder(
+            borderSide: const BorderSide(color: Color(0x1A17332D)),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: const BorderSide(color: NourishColors.green, width: 1.4),
+            borderRadius: BorderRadius.circular(16),
+          ),
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),

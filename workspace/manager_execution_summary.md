@@ -257,3 +257,82 @@ Deferred:
   1. `cd mealtrust_app && flutter build web`
   2. `npm start`
   3. open `http://localhost:3000`
+
+## Current Branding Note
+
+- outward-facing product name is now `NourishChain`
+- internal identifiers remain unchanged for now where renaming would create avoidable integration risk:
+  - `mealtrust_app/`
+  - `mealtrust_state`
+
+## Frontend Manager Prompt
+
+- added `workspace/frontend_manager_prompt.md`
+- it is the frontend-specific manager prompt for the Flutter app
+- it decomposes work into issuer/admin, student/beneficiary, merchant, auditor, shared components, and validation workstreams
+
+## NourishChain Frontend Branding And Logo
+
+- integrated `docs/assets/Nourish_Chain_logo-removebg-preview.png` into the Flutter app as a brand asset
+- added a reusable `NourishBrandMark` component for the app bar and login hero
+- updated the Flutter shell so the visible product name is `NourishChain`
+- verified the app still builds for web with `flutter build web`
+- kept the backend contract intact while improving the presentation layer
+- remaining frontend work, if any, is polish and role-specific content refinement rather than core layout risk
+
+## Frontend Redesign Prompt
+
+- created `workspace/frontend_ui_redesign_prompt.md`
+- this is the prompt to use for the next frontend execution run
+- it explicitly allows discarding the current screen skeleton and rebuilding the role-specific UI from scratch
+- it defines the required screen split and navigation story for issuer, student, merchant, and auditor flows
+- it also states that React-specific UI library suggestions are not directly applicable to this Flutter codebase, so Flutter-native packages or the existing shared widgets should be used instead
+
+## Frontend Role Hub Rewrite
+
+- replaced the post-login redirect behavior with a central role-switch hub
+- login now lands on a role hub instead of routing directly into one role screen
+- the home screen now exposes issuer, student, merchant, and auditor entry cards with scenario text
+- the UI now has a materially different structure, not just a branded overlay
+- validation passed:
+  - `flutter analyze`
+  - `flutter build web`
+- remaining frontend work is now primarily screen-level polish and any role-specific flow refinements, not basic navigation architecture
+
+## Home Bottom Tabs And Package Rename Cleanup
+
+- changed the app shell to use bottom tabs for Home, Issuer, Student, Merchant, and Auditor
+- updated the visible Flutter package name in `mealtrust_app/pubspec.yaml` to `nourishchain`
+- removed the remaining visible MealTrust / mealtrust branding from the active Flutter UI surfaces
+- cleaned stale Flutter build artifacts so the renamed package resolved correctly
+- validation passed:
+  - `flutter clean`
+  - `flutter pub get`
+  - `flutter build web`
+- result:
+  - the app now presents a true tabbed home shell
+  - the web build succeeds after the name cleanup
+
+## Admin Route Alignment
+
+- added an explicit `/admin` route in `src/server.js` to serve the same Flutter web app as `/`
+- rebuilt the Flutter web bundle after the routing change
+- result:
+  - `/admin` is now aligned with the current Flutter demo shell instead of any legacy UI path
+  - the backend no longer has a separate admin UI fallback route
+
+## One-Command Demo Helper
+
+- added a root `Makefile` with `make demo`, `make build-web`, `make start`, `make test`, `make clean`, and `make help`
+- updated `README.md` to document `make demo` as the simplest local startup path
+- result:
+  - a contributor can build the Flutter web app and start the backend with one command
+  - the expected localhost demo entrypoint is now explicit in the docs
+
+## Windows-Friendly Demo Script
+
+- added `npm run demo` to `package.json` as a cross-platform startup path
+- `npm run demo` builds the Flutter web app and then starts the backend
+- updated `README.md` so Windows users know they can use `npm run demo` when GNU `make` is unavailable
+- result:
+  - the repo now has both a WSL-oriented `make demo` path and a Windows-friendly `npm run demo` path

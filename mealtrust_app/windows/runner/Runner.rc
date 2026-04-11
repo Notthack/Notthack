@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.mealtrust" "\0"
-            VALUE "FileDescription", "mealtrust" "\0"
+            VALUE "CompanyName", "com.nourishchain" "\0"
+            VALUE "FileDescription", "NourishChain" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "mealtrust" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.mealtrust. All rights reserved." "\0"
-            VALUE "OriginalFilename", "mealtrust.exe" "\0"
-            VALUE "ProductName", "mealtrust" "\0"
+            VALUE "InternalName", "NourishChain" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 com.nourishchain. All rights reserved." "\0"
+            VALUE "OriginalFilename", "nourishchain.exe" "\0"
+            VALUE "ProductName", "NourishChain" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

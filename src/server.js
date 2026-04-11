@@ -606,6 +606,10 @@ app.get("/", (_req, res) => {
 });
 
 if (hasFlutterWebBuild) {
+  app.get("/admin", (_req, res) => {
+    res.sendFile(path.join(flutterWebBuildDir, "index.html"));
+  });
+
   app.get(/^(?!\/api\/).*/, (_req, res) => {
     res.sendFile(path.join(flutterWebBuildDir, "index.html"));
   });

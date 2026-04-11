@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import '../models/voucher.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
-import '../models/voucher.dart';
+import '../widgets/nourish_components.dart';
 import 'login_screen.dart';
 
 class StudentScreen extends StatefulWidget {
@@ -58,86 +59,89 @@ class _StudentScreenState extends State<StudentScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = AuthService.instance;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Student Pass'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
-            onPressed: _loading ? null : _lookupVoucher,
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Sign out',
-            onPressed: _logout,
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
+    return NourishShell(
+      roleLabel: 'Student / Beneficiary',
+      title: 'NourishChain',
+      subtitle: auth.displayName ?? auth.email ?? 'Signed in',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          tooltip: 'Refresh pass',
+          onPressed: _loading ? null : _lookupVoucher,
+        ),
+        IconButton(
+          icon: const Icon(Icons.logout),
+          tooltip: 'Sign out',
+          onPressed: _logout,
+        ),
+      ],
+      chips: [
+        NourishPill(
+          label: 'Wallet-free',
+          icon: Icons.phonelink_off,
+          background: const Color(0x193D6DE1),
+          foreground: NourishColors.blue,
+          borderColor: const Color(0x263D6DE1),
+        ),
+      ],
+      scrollable: false,
+      child: RefreshIndicator(
         onRefresh: _lookupVoucher,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.only(bottom: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF00C4A0).withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: const Color(0xFF00C4A0).withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.person_outline, color: Color(0xFF00C4A0)),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            auth.displayName ?? 'Student',
-                            style: const TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            '${auth.studentId ?? "-"} · ${auth.email ?? ""}',
-                            style: const TextStyle(
-                                fontSize: 11, color: Colors.black54),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+              NourishHeaderPanel(
+                roleLabel: 'Beneficiary pass',
+                headline: 'One QR. One voucher. No wallet.',
+                body:
+                    'Show this pass at the cafeteria cashier. The student experience stays simple while the chain-backed trust state is handled behind the scenes.',
+                badges: [
+                  NourishPill(
+                    label: 'Student ID ${auth.studentId ?? "-"}',
+                    icon: Icons.badge_outlined,
+                    background: const Color(0x14FFFFFF),
+                    foreground: Colors.white,
+                  ),
+                ],
+                trailing: Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.14)),
+                  ),
+                  child: const Icon(Icons.qr_code_2,
+                      color: Colors.white, size: 38),
                 ),
               ),
-              const SizedBox(height: 20),
-              const Text('Your Meal Voucher',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 6),
-              const Text('Show this QR at the cafeteria cashier. One use only.',
-                  style: TextStyle(fontSize: 13, color: Colors.black54)),
-              const SizedBox(height: 24),
+              const SizedBox(height: 18),
               if (_loading)
                 const Padding(
-                  padding: EdgeInsets.all(40),
+                  padding: EdgeInsets.symmetric(vertical: 48),
                   child: Center(child: CircularProgressIndicator()),
+                )
+              else if (_error != null)
+                NourishStatusCard(
+                  title: 'Voucher unavailable',
+                  body: _error!,
+                  icon: Icons.error_outline,
+                  accent: Colors.red,
+                )
+              else if (_voucher != null)
+                _buildVoucherCard(_voucher!)
+              else
+                const NourishStatusCard(
+                  title: 'No pass loaded yet',
+                  body:
+                      'Refresh to load your current voucher. If Student Affairs has not issued one yet, this screen remains empty.',
+                  icon: Icons.hourglass_empty,
+                  accent: NourishColors.green,
                 ),
-              if (!_loading && _error != null)
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.red.shade200),
-                  ),
-                  child:
-                      Text(_error!, style: TextStyle(color: Colors.red.shade700)),
-                ),
-              if (!_loading && _voucher != null) _buildVoucherCard(_voucher!),
             ],
           ),
         ),
@@ -147,111 +151,117 @@ class _StudentScreenState extends State<StudentScreen> {
 
   Widget _buildVoucherCard(Voucher voucher) {
     final stateColor = voucher.isActive
-        ? const Color(0xFF00C4A0)
+        ? NourishColors.green
         : voucher.isRedeemed
-            ? Colors.blue
+            ? NourishColors.blue
             : Colors.red;
 
-    return Column(
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                  color: stateColor.withValues(alpha: 0.2),
-                  blurRadius: 20,
-                  offset: const Offset(0, 6)),
-            ],
-          ),
-          child: Column(
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: stateColor,
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(20)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      voucher.isActive
-                          ? 'Valid Meal Pass'
-                          : voucher.isRedeemed
-                              ? 'Already Used'
-                              : 'Revoked Pass',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold),
-                    ),
-                    Text(voucher.id,
-                        style:
-                            const TextStyle(color: Colors.white70, fontSize: 12)),
-                  ],
-                ),
+    return NourishActionCard(
+      title: 'Your voucher',
+      body:
+          'This card is the only thing you need to present. It is readable, wallet-free, and clear in every state.',
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: stateColor.withValues(alpha: 0.18)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: stateColor,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(26)),
               ),
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: voucher.isActive
-                    ? QrImageView(
-                        data: voucher.id,
-                        version: QrVersions.auto,
-                        size: 220,
-                        backgroundColor: Colors.white,
-                      )
-                    : Column(
-                        children: [
-                          Icon(
-                            voucher.isRedeemed ? Icons.done_all : Icons.block,
-                            size: 80,
-                            color: stateColor.withValues(alpha: 0.4),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            voucher.isRedeemed
-                                ? 'This voucher has been used.'
-                                : 'This voucher has been revoked.\nContact Student Affairs.',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                                color: Colors.black54, fontSize: 14),
-                          ),
-                        ],
-                      ),
-              ),
-              if (voucher.isActive)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.info_outline,
-                            size: 16, color: Colors.black38),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Show this QR at the cafeteria cashier. One use only.',
-                            style:
-                                TextStyle(fontSize: 12, color: Colors.black54),
-                          ),
-                        ),
-                      ],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    voucher.isActive
+                        ? 'Active voucher'
+                        : voucher.isRedeemed
+                            ? 'Already redeemed'
+                            : 'Revoked voucher',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
-                ),
-            ],
-          ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${voucher.label ?? "Meal Support Voucher"} • ${voucher.amountLabel ?? "1 meal"}',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(22),
+              child: Column(
+                children: [
+                  if (voucher.isActive)
+                    QrImageView(
+                      data: voucher.id,
+                      version: QrVersions.auto,
+                      size: 224,
+                      backgroundColor: Colors.white,
+                    )
+                  else
+                    Icon(
+                      voucher.isRedeemed ? Icons.done_all : Icons.block,
+                      size: 84,
+                      color: stateColor.withValues(alpha: 0.45),
+                    ),
+                  const SizedBox(height: 16),
+                  Text(
+                    voucher.isActive
+                        ? 'Show this QR to the cashier.'
+                        : voucher.isRedeemed
+                            ? 'This pass has already been used.'
+                            : 'This pass has been revoked by Student Affairs.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: NourishColors.slate,
+                      fontSize: 13.5,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      NourishPill(
+                        label: 'Voucher ${voucher.id}',
+                        icon: Icons.confirmation_number_outlined,
+                        background: stateColor.withValues(alpha: 0.08),
+                        foreground: stateColor,
+                        borderColor: stateColor.withValues(alpha: 0.18),
+                      ),
+                      if (voucher.redemptionCheckpointId != null)
+                        NourishPill(
+                          label: 'Checkpoint ${voucher.redemptionCheckpointId}',
+                          icon: Icons.link,
+                          background: Colors.black.withValues(alpha: 0.04),
+                          foreground: NourishColors.ink,
+                          borderColor: Colors.black.withValues(alpha: 0.06),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

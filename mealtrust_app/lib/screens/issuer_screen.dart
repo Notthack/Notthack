@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../models/voucher.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
-import '../models/voucher.dart';
+import '../widgets/nourish_components.dart';
 import 'login_screen.dart';
 
 class IssuerScreen extends StatefulWidget {
@@ -17,6 +18,7 @@ class _IssuerScreenState extends State<IssuerScreen>
   late TabController _tabs;
   final _studentIdController = TextEditingController();
   bool _loading = false;
+  bool _resetting = false;
   String? _message;
   bool _messageIsError = false;
   String? _lastTxSignature;
@@ -85,6 +87,30 @@ class _IssuerScreenState extends State<IssuerScreen>
     }
   }
 
+  Future<void> _resetDemo() async {
+    setState(() => _resetting = true);
+    try {
+      await ApiService.resetSeed();
+      await _loadVouchers();
+      if (!mounted) return;
+      setState(() {
+        _message = 'Demo state reset.';
+        _messageIsError = false;
+      });
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Demo reset complete.')));
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _message = 'Reset failed: $e';
+          _messageIsError = true;
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _resetting = false);
+    }
+  }
+
   Future<void> _openExplorer(String url) async {
     final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
@@ -93,15 +119,55 @@ class _IssuerScreenState extends State<IssuerScreen>
   }
 
   Future<void> _revokeVoucher(String voucherId) async {
-    final reason = await _showRevokeDialog();
+    final reason = await _showReasonDialog(
+      title: 'Revoke voucher',
+      label: 'Reason code',
+      hint: 'eligibility_lost',
+      confirmText: 'Revoke',
+    );
     if (reason == null) return;
     try {
-      await ApiService.revokeVoucher(voucherId, reason);
+      final resp = await ApiService.revokeVoucher(voucherId, reason);
+      final onChain = resp['onChain'] as Map<String, dynamic>?;
       await _loadVouchers();
       if (mounted) {
+        setState(() {
+          _message = resp['message'] ?? 'Voucher revoked.';
+          _messageIsError = false;
+          _lastTxSignature = onChain?['signature'];
+          _lastExplorerUrl = onChain?['explorerUrl'];
+          _lastCluster = onChain?['cluster'];
+        });
+      }
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Voucher revoked.')),
+          SnackBar(content: Text('Error: $e')),
         );
+      }
+    }
+  }
+
+  Future<void> _overrideVoucher(String voucherId) async {
+    final reason = await _showReasonDialog(
+      title: 'Log override',
+      label: 'Override reason',
+      hint: 'manual_review_approved',
+      confirmText: 'Log',
+    );
+    if (reason == null) return;
+    try {
+      final resp = await ApiService.logOverride(voucherId, reason);
+      final onChain = resp['onChain'] as Map<String, dynamic>?;
+      await _loadVouchers();
+      if (mounted) {
+        setState(() {
+          _message = resp['message'] ?? 'Override logged.';
+          _messageIsError = false;
+          _lastTxSignature = onChain?['signature'];
+          _lastExplorerUrl = onChain?['explorerUrl'];
+          _lastCluster = onChain?['cluster'];
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -126,24 +192,33 @@ class _IssuerScreenState extends State<IssuerScreen>
     );
   }
 
-  Future<String?> _showRevokeDialog() {
+  Future<String?> _showReasonDialog({
+    required String title,
+    required String label,
+    required String hint,
+    required String confirmText,
+  }) {
     final controller = TextEditingController();
     return showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Revoke Voucher'),
+        title: Text(title),
         content: TextField(
           controller: controller,
-          decoration:
-              const InputDecoration(labelText: 'Reason (e.g. eligibility lost)'),
+          decoration: InputDecoration(
+            labelText: label,
+            hintText: hint,
+          ),
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-              child: const Text('Revoke')),
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: Text(confirmText),
+          ),
         ],
       ),
     );
@@ -151,144 +226,202 @@ class _IssuerScreenState extends State<IssuerScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Issuer — Student Affairs'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Sign out',
-            onPressed: _logout,
+    final role = AuthService.instance.displayName ?? AuthService.instance.email ?? 'Student Affairs';
+    final activeCount = _vouchers.where((v) => v.isActive).length;
+    final redeemedCount = _vouchers.where((v) => v.isRedeemed).length;
+    final revokedCount = _vouchers.where((v) => v.isRevoked).length;
+
+    return NourishShell(
+      roleLabel: 'Issuer / Student Affairs',
+      title: 'NourishChain',
+      subtitle: role,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.restart_alt),
+          tooltip: 'Reset demo data',
+          onPressed: _resetting ? null : _resetDemo,
+        ),
+        IconButton(
+          icon: const Icon(Icons.logout),
+          tooltip: 'Sign out',
+          onPressed: _logout,
+        ),
+      ],
+      chips: [
+        NourishPill(
+          label: 'Issuer view',
+          icon: Icons.admin_panel_settings,
+          background: const Color(0x193D6DE1),
+          foreground: NourishColors.blue,
+          borderColor: const Color(0x263D6DE1),
+        ),
+      ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          NourishHeaderPanel(
+            roleLabel: 'Student Affairs',
+            headline: 'Issue support, revoke eligibility, and log override decisions.',
+            body:
+                'This surface keeps the issuer in control of issuance and remediation, while the on-chain layer captures the shared trust state and audit checkpoints.',
+            badges: [
+              NourishPill(
+                label: 'Active $activeCount',
+                icon: Icons.check_circle_outline,
+                background: const Color(0x14FFFFFF),
+                foreground: Colors.white,
+              ),
+              NourishPill(
+                label: 'Redeemed $redeemedCount',
+                icon: Icons.done_all,
+                background: const Color(0x14FFFFFF),
+                foreground: Colors.white,
+              ),
+              NourishPill(
+                label: 'Revoked $revokedCount',
+                icon: Icons.cancel_outlined,
+                background: const Color(0x14FFFFFF),
+                foreground: Colors.white,
+              ),
+            ],
+            trailing: const Icon(Icons.admin_panel_settings,
+                color: Colors.white, size: 38),
+          ),
+          const SizedBox(height: 18),
+          if (_message != null) ...[
+            _messageBanner(),
+            const SizedBox(height: 16),
+          ],
+          TabBar(
+            controller: _tabs,
+            labelColor: NourishColors.ink,
+            unselectedLabelColor: NourishColors.slate,
+            indicatorColor: NourishColors.green,
+            tabs: const [
+              Tab(text: 'Issue Voucher'),
+              Tab(text: 'Manage Vouchers'),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 560,
+            child: TabBarView(
+              controller: _tabs,
+              children: [
+                _buildIssueTab(),
+                _buildManageTab(),
+              ],
+            ),
           ),
         ],
-        bottom: TabBar(
-          controller: _tabs,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          tabs: const [
-            Tab(text: 'Issue Voucher'),
-            Tab(text: 'Manage Vouchers'),
-          ],
-        ),
       ),
-      body: TabBarView(
-        controller: _tabs,
+    );
+  }
+
+  Widget _messageBanner() {
+    final onChain = _lastTxSignature != null;
+    return NourishActionCard(
+      title: _messageIsError ? 'Action failed' : 'Action complete',
+      body: _message ?? '',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildIssueTab(),
-          _buildManageTab(),
+          if (onChain)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: NourishColors.green.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: NourishColors.green.withValues(alpha: 0.18)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('On-chain checkpoint',
+                      style: TextStyle(
+                          color: NourishColors.green,
+                          fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 6),
+                  Text(
+                    '${_lastCluster ?? "localnet"} • ${_shortSig(_lastTxSignature!)}',
+                    style: const TextStyle(
+                      color: NourishColors.ink,
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                    ),
+                  ),
+                  if (_lastExplorerUrl != null) ...[
+                    const SizedBox(height: 8),
+                    TextButton.icon(
+                      onPressed: () => _openExplorer(_lastExplorerUrl!),
+                      icon: const Icon(Icons.open_in_new, size: 16),
+                      label: const Text('Open in explorer'),
+                    ),
+                  ],
+                ],
+              ),
+            ),
         ],
       ),
     );
   }
 
   Widget _buildIssueTab() {
-    return Padding(
-      padding: const EdgeInsets.all(24),
+    return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('Issue a new meal voucher',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          const Text(
-              'Eligibility is verified offline by Student Affairs before issuance.',
-              style: TextStyle(fontSize: 13, color: Colors.black54)),
-          const SizedBox(height: 24),
-          TextField(
-            controller: _studentIdController,
-            decoration: const InputDecoration(
-              labelText: 'Student ID',
-              prefixIcon: Icon(Icons.person),
+          NourishActionCard(
+            title: 'Issue a new meal voucher',
+            body:
+                'Eligibility is decided before issuance. The voucher is then available to the student as a wallet-free QR pass.',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: _studentIdController,
+                  decoration: const InputDecoration(
+                    labelText: 'Student ID',
+                    prefixIcon: Icon(Icons.person_outline),
+                  ),
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _issueVoucher(),
+                ),
+                const SizedBox(height: 14),
+                ElevatedButton.icon(
+                  onPressed: _loading ? null : _issueVoucher,
+                  icon: _loading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.add_card),
+                  label: Text(_loading ? 'Issuing...' : 'Issue voucher'),
+                ),
+                const SizedBox(height: 12),
+                const NourishInlineNotice(
+                  icon: Icons.info_outline,
+                  title: 'How issuance works',
+                  body:
+                      'The issuer prepares support for an eligible student. Redemption and revocation are the only chain-backed state changes.',
+                  accent: NourishColors.green,
+                ),
+              ],
             ),
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _issueVoucher(),
           ),
           const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: _loading ? null : _issueVoucher,
-            icon: _loading
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white))
-                : const Icon(Icons.add_card),
-            label: Text(_loading ? 'Issuing...' : 'Issue Voucher'),
-          ),
-          if (_message != null) ...[
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: _messageIsError
-                    ? Colors.red.shade50
-                    : Colors.green.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                    color: _messageIsError
-                        ? Colors.red.shade200
-                        : Colors.green.shade200),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(_message!,
-                      style: TextStyle(
-                          color: _messageIsError
-                              ? Colors.red.shade700
-                              : Colors.green.shade700)),
-                  if (_lastTxSignature != null) ...[
-                    const SizedBox(height: 10),
-                    if (_lastExplorerUrl != null)
-                      InkWell(
-                        onTap: () => _openExplorer(_lastExplorerUrl!),
-                        borderRadius: BorderRadius.circular(6),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF9945FF), Color(0xFF14F195)],
-                            ),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.link,
-                                  size: 14, color: Colors.white),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Recorded on Solana ${_lastCluster ?? "localnet"}: ${_shortSig(_lastTxSignature!)}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  fontFamily: 'monospace',
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              const Icon(Icons.open_in_new,
-                                  size: 12, color: Colors.white),
-                            ],
-                          ),
-                        ),
-                      )
-                    else
-                      Text(
-                        'Recorded on Solana ${_lastCluster ?? "localnet"}: ${_shortSig(_lastTxSignature!)}',
-                        style: const TextStyle(
-                          color: Colors.black54,
-                          fontSize: 11,
-                          fontFamily: 'monospace',
-                        ),
-                      ),
-                  ],
-                ],
-              ),
+          NourishStatusCard(
+            title: 'Demo control',
+            body:
+                'Use reset before stage demos to restore the seeded vouchers and keep the happy path predictable.',
+            icon: Icons.restart_alt,
+            accent: NourishColors.blue,
+            trailing: OutlinedButton(
+              onPressed: _resetting ? null : _resetDemo,
+              child: Text(_resetting ? 'Resetting...' : 'Reset demo'),
             ),
-          ],
+          ),
         ],
       ),
     );
@@ -300,12 +433,17 @@ class _IssuerScreenState extends State<IssuerScreen>
       child: _vouchers.isEmpty
           ? const Center(child: Text('No vouchers found.'))
           : ListView.separated(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.only(bottom: 12),
               itemCount: _vouchers.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (_, i) {
                 final v = _vouchers[i];
-                return Card(
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+                  ),
                   child: ListTile(
                     leading: Icon(
                       v.isActive
@@ -314,43 +452,40 @@ class _IssuerScreenState extends State<IssuerScreen>
                               ? Icons.done_all
                               : Icons.cancel,
                       color: v.isActive
-                          ? Colors.green
+                          ? NourishColors.green
                           : v.isRedeemed
-                              ? Colors.blue
+                              ? NourishColors.blue
                               : Colors.red,
                     ),
                     title: Text(v.id,
                         style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('Student: ${v.studentId}'),
-                    trailing: _StateChip(state: v.state),
-                    onLongPress: v.isActive
-                        ? () => _revokeVoucher(v.id)
-                        : null,
+                    subtitle: Text(
+                      '${v.studentName ?? v.studentId} • ${v.amountLabel ?? "1 meal"}',
+                      style: const TextStyle(fontSize: 12.5),
+                    ),
+                    trailing: PopupMenuButton<String>(
+                      onSelected: (value) {
+                        if (value == 'revoke') {
+                          _revokeVoucher(v.id);
+                        } else if (value == 'override') {
+                          _overrideVoucher(v.id);
+                        }
+                      },
+                      itemBuilder: (context) => const [
+                        PopupMenuItem(
+                          value: 'revoke',
+                          child: Text('Revoke voucher'),
+                        ),
+                        PopupMenuItem(
+                          value: 'override',
+                          child: Text('Log override'),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },
             ),
-    );
-  }
-}
-
-class _StateChip extends StatelessWidget {
-  final String state;
-  const _StateChip({required this.state});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = state == 'active'
-        ? Colors.green
-        : state == 'redeemed'
-            ? Colors.blue
-            : Colors.red;
-    return Chip(
-      label: Text(state,
-          style: TextStyle(fontSize: 11, color: color.shade700)),
-      backgroundColor: color.shade50,
-      side: BorderSide(color: color.shade200),
-      padding: EdgeInsets.zero,
     );
   }
 }
