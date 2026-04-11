@@ -244,3 +244,13 @@ Why it can lose:
   - the branch was good directionally
   - full merge was not accepted
   - selective integration into `main` was accepted
+
+## 2026-04-11 Public UI Retirement
+
+- removed the temporary `public/` web UI
+- converted `src/server.js` from mixed API + static hosting to API-only mode
+- kept `/` as a small JSON status endpoint so `npm start` still has an obvious health response
+- switched repository instructions to:
+  - `npm start` for backend
+  - `flutter run` in `mealtrust_app/` for the UI
+- confirmed that the project now treats Flutter as the primary UI surface

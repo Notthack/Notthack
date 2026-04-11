@@ -30,6 +30,9 @@
   - rejected the branch-wide `NourishChain` rename
   - selectively integrated auth into the existing `MealTrust` codebase instead of merging the branch wholesale
   - preserved `merchant_not_approved` by keeping `CAF-X` as a blocked merchant account in the demo auth directory
+- retired the temporary `public/` web UI
+  - `src/server.js` now runs as API-only backend
+  - Flutter in `mealtrust_app/` is now the primary UI surface
 
 
 ## Restated Frozen Scope
@@ -159,11 +162,11 @@ Blockchain remains narrow and backend-only:
 - `cargo check` in `anchor/programs/mealtrust_state`
 - `anchor build` in WSL (initial SBF bootstrap started, then stopped after confirming the host-side contract compiles; this remains a follow-up runtime check rather than a contract-design blocker)
 - HTTP smoke checks:
-  - `GET /`
-  - `GET /api/bootstrap`
-  - `GET /api/context`
-  - `GET /api/student/STU-1001/voucher`
-  - `GET /api/solana/status`
+- `GET /`
+- `GET /api/bootstrap`
+- `GET /api/context`
+- `GET /api/student/STU-1001/voucher`
+- `GET /api/solana/status`
 
 ## Judge-Facing Decision
 
@@ -231,7 +234,6 @@ Complete:
 
 Deferred:
 
-- deleting the temporary `public/` web UI before the Flutter replacement is fully wired
 - deleting the existing `src/` Node backend before a Solana-backed backend replacement exists
 - replacing the local ledger implementation with live Solana program calls
 - generating and wiring the Anchor IDL into the Node backend

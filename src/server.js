@@ -1,7 +1,5 @@
 import express from "express";
 import QRCode from "qrcode";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import {
   deriveVoucherHash,
   applyDemoReset,
@@ -30,14 +28,10 @@ import {
   listAccounts,
 } from "./lib/auth.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 const app = express();
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "..", "public")));
 
 function sendJsonError(res, status, message, extra = {}) {
   return res.status(status).json({
@@ -585,16 +579,19 @@ app.get("/api/context", (_req, res) => {
   });
 });
 
-app.use((req, res, next) => {
-  if (req.path.startsWith("/api/")) {
-    return sendJsonError(res, 404, "Not found");
-  }
-  return next();
+app.get("/", (_req, res) => {
+  res.json({
+    ok: true,
+    service: "bga-university-hardship-voucher-demo",
+    mode: "api_only",
+    ui: {
+      primary: "mealtrust_app",
+      launch: "Run `flutter run` inside mealtrust_app/.",
+    },
+  });
 });
 
-app.get("*", (_req, res) => {
-  res.sendFile(path.join(__dirname, "..", "public", "index.html"));
-});
+app.use((_req, res) => sendJsonError(res, 404, "Not found"));
 
 app.listen(port, () => {
   console.log(`Demo running at http://127.0.0.1:${port}`);

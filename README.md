@@ -9,6 +9,7 @@ This repository contains a judge-ready local demo for the BGA Track at NottsHack
 - a merchant verify and redeem flow for approved campus cafeterias
 - an auditor-visible history of meaningful events
 - a narrow blockchain-style trust layer for redemption, revocation, and audit checkpoints
+- a Flutter app as the primary UI surface
 
 ![MealTrust demo UI](docs/assets/mealtrust-demo.png)
 
@@ -79,9 +80,9 @@ The local demo supports:
 
 ## Tech Stack
 
-- Node.js
-- Express
-- simple browser UI in vanilla HTML/CSS/JS
+- Flutter app in `mealtrust_app/`
+- Node.js / Express backend in `src/`
+- Anchor workspace in `anchor/`
 - local runtime state stored in `src/data/runtime-state.json`
 
 ## Run Locally
@@ -96,16 +97,23 @@ The local demo supports:
 npm install
 ```
 
-### Start the app
+### Start the backend
 
 ```bash
 npm start
 ```
 
-Open:
+The backend listens on:
 
 ```text
 http://localhost:3000
+```
+
+### Start the Flutter UI
+
+```bash
+cd mealtrust_app
+flutter run -d chrome
 ```
 
 ### Run acceptance checks
@@ -129,7 +137,8 @@ Use the app in this order:
 ## Repository Structure
 
 - `src/` — backend server and state logic
-- `public/` — local demo UI
+- `mealtrust_app/` — primary Flutter UI
+- `anchor/` — minimal Solana / Anchor trust-layer scaffold
 - `scripts/` — acceptance checks
 - `docs/` — concept notes and team-share docs
 - `workspace/` — planning, strategy, pitch, and execution logs
@@ -147,6 +156,7 @@ Use the app in this order:
 Implemented:
 
 - local backend
+- Flutter UI with role-based login
 - merchant verify/redeem flow
 - issuer issue/revoke/override flow
 - student wallet-free QR pass
