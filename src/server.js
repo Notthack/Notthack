@@ -596,7 +596,7 @@ app.get("/", (_req, res) => {
 
   return res.json({
     ok: true,
-    service: "bga-university-hardship-voucher-demo",
+    service: "nourishchain-api",
     mode: "api_only",
     ui: {
       primary: "mealtrust_app",
